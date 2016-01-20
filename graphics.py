@@ -1,16 +1,174 @@
+## Sort function for sorting by y
+#
+#  Allows things that have smallers y values to be drawn first.
+def sortY(a):
+	#if int(a.getPos()[1])!=a.getPos()[1]:		#  This is commented out for the sake of the example, because it uses partial pixels.
+	#	print "Sort Error: "+str(type(a))
+	return int(a.getPos()[1]+a.getHeight())
+
+## Container for a single frame in an animation.
+#
+#  Essentially is a linked list of frames.
+#
+#  This may not be needed if we are not having sprites...
+class AnimationFrame(object):
+	
+	## Constructor.
+	#  @param image Image data.
+	#  @param delay Delay before proceeding to next frame, in seconds.
+	#  @param nextFrame Reference to next AnimationFrame. Set to @c None if this is the last frame.
+	#  @param number Frame number.
+	def __init__(self,image,delay,nextFrame,number):
+		self.image = image
+		self.delay = delay
+		self.nextFrame = nextFrame
+		self.number = number
+		self.count = 0
+	
+	## Returns this frame's image data
+	def getImage(self):
+		return self.image
+	
+	## Returns the delay before proceeding to the next frame, in seconds.
+	def getDelay(self):
+		return self.delay
+	
+	## Returns the next frame.
+	def getNextFrame(self):
+		return self.nextFrame
+	
+	## Returns this frame's frame number.
+	def getNumber(self):
+		return self.number
+	
+	## Updates this frame and returns the current frame.
+	#  @param tick Time that has passed since last clock cycle in seconds.
+	def update(self,tick):
+		self.count += tick
+		if self.count >= self.delay:
+			self.count=0
+			return self.nextFrame
+		else:
+			return self
+	
+	## Resets frame to original state.
+	def reset(self):
+		self.count = 0
+
+## Container for a sequence of frames.
+#
+#  Essentially is a linked list of Animations.
+#
+#  This may not be needed if we are not having sprites...
+class Animation(object):
+	
+	## Constructor.
+	#  @param firstFrame First AnimationFrame in the sequence.
+	#  @param nextAnimation Reference to next Animation. Set to @c None if this animation should repeat.
+	#  @param name Name of animation.
+	def __init__(self,firstFrame,nextAnimation,name):
+		self.firstFrame = firstFrame
+		self.nextAnimation = nextAnimation
+		self.frame = self.firstFrame
+		self.name = name
+	
+	## Adds a frame to the animation.
+	#  @param frame Frame to be added.
+	def addFrame(self,frame):
+		if self.firstFrame == None:
+			self.firstFrame = frame
+			self.frame = self.firstFrame
+		else:
+			temp = self.firstFrame
+			while temp.nextFrame != None:
+				temp = temp.nextFrame
+			temp.nextFrame = frame
+	
+	## Returns a list of AnimationFrame objects in the animation.
+	def getFrames(self):
+		temp = self.firstFrame
+		if temp == None:
+			return []
+		else:
+			ret = [temp]
+			while temp.nextFrame != None:
+				temp = temp.nextFrame
+				ret.append(temp)
+			return ret
+	
+	## Returns the current frame number.
+	def getFrame(self):
+		return self.frame.number + (float(self.frame.count)/self.frame.delay)
+	
+	## Returns the next animation.
+	def getNextAnimation(self):
+		return self.nextAnimation
+	
+	## Returns this animation's name.
+	def getName(self):
+		return self.name
+	
+	## Sets the current frame number.
+	def setFrame(self,frame):
+		temp = self.firstFrame
+		while temp.number != int(frame):
+			if temp.nextFrame == None:
+				if temp.number<int(frame):
+					self.frame=self.firstFrame
+					return
+			temp = temp.nextFrame
+		self.frame = temp
+		self.frame.count = (frame-int(frame))*self.frame.delay
+	
+	## Sets the next animation, useful for manual linking.
+	def setNextAnimation(self,animation):
+		self.nextAnimation = animation
+	
+	## Updates this animation and returns the current animation.
+	#
+	#  Also updates the current frame.
+	#  @param tick Time that has passed since last clock cycle in seconds.
+	def update(self,tick):
+		self.frame = self.frame.update(tick)
+		if self.frame == None:
+			self.frame = self.firstFrame
+			if self.nextAnimation == None:
+				return self
+			else:
+				return self.nextAnimation
+		else:
+			return self
+	
+	## Resets animation to original state.
+	#
+	#  Also resets current frame to original state.
+	def reset(self):
+		self.frame.reset()
+		self.frame = self.firstFrame
+	
+	## Returns the current frame's image.
+	def getSprite(self):
+		return self.frame.image
+
 ## An object that contains graphics information.
 #
 #  Anything that the character can interact with should use this.
 class GraphicObject(object):
 	
 	## Constructor.
+	#  @param animations A dictionary of animations
 	#  @param parent Reference to parent object, ie. the Player class for the player's graphic object.
 	#  @param state Starting state of the object.
 	#  @param rot The rotation of the graphic object in radians.
 	#  @param layer Sets draw order for objects.  Objects in layer 1 render first, then objects in layer 0, etc.
-	def __init__(self,parent=None,state="Idle",rot=0,layer=0):
+	#
+	#  @todo Rotation not yet implemented
+	def __init__(self,animations,parent=None,state="Idle",rot=0,layer=0):
+		self.animations = animations
+		self.currentAnimation = animations[state]
+		
 		self.state = state
-		self.direction = direction	#0-N, 1-E, 2-S, 3-W
+		self.rot = rot
 		self.layer = layer
 		self.parent= parent
 		
@@ -20,8 +178,7 @@ class GraphicObject(object):
 	
 	## Sets where the object should be drawn.
 	#
-	#  Does not change where object is in regards to interactions with objects.
-	#  See game.GameObject.setPos().
+	#  Should be integers, as partial pixels mean nothing to pygame.
 	def setPos(self,pos):
 		self.x=pos[0]
 		self.y=pos[1]
@@ -54,15 +211,7 @@ class GraphicObject(object):
 	def setState(self,state):
 		self.state=state
 		self.currentAnimation.reset()
-		self.currentAnimation = self.animations[self.state][self.direction]
-	
-	## Sets the direction the object is facing.
-	def setDirection(self,direction):
-		self.direction=direction
-		f = self.currentAnimation.getFrame()
-		self.currentAnimation.reset()
-		self.currentAnimation = self.animations[self.state][self.direction]
-		self.currentAnimation.setFrame(f)
+		self.currentAnimation = self.animations[self.state]
 	
 	## Returns the current frame's image.
 	def getSprite(self):
@@ -89,25 +238,22 @@ class GraphicsEngine(object):
 	## Constructor.
 	#  @param screen A reference to either a Pygame screen object or a scaledScreen.
 	#  @param isScaled If @c screen is a scaledScreen, then should be @c True.
-	def __init__(self,screen,isScaled=False):
+	def __init__(self,screen):
 		self.screen = screen
-		self.isScaled = isScaled
+		self.screenWidth = screen.get_width()
+		self.screenHeight = screen.get_height()
 		self.objects = []
-		self.Player = None
+		self.player = None
 		self.background = pygame.surface.Surface([0,0])
 		self.cameraPosX = 0
 		self.cameraPosY = 0
 		self.focus=None
-		self.talking=None
-		self.shop=False
-		self.paused=False
-		self.inven=False
 		self.levelName=None
 	
 	## Add an object.
 	#
 	#  Adds an object to the list of objects to be drawn and updated.
-	#  @param Object Object to be added.
+	#  @param Object GraphicObject to be added.
 	def addObject(self,Object):
 		self.objects.append(Object)
 	
@@ -116,79 +262,34 @@ class GraphicsEngine(object):
 		self.objects = []
 	
 	## Sets who is the player.
-	#  @param Player The player.
-	def setPlayer(self,Player):
-		self.Player = Player
+	#  @param Player The player's GraphicObject.
+	def setPlayer(self,player):
+		self.player = player
 	
 	## Sets the focus of the camera.
 	#
 	#  Sets an object for the camera to follow.
-	#  @param focus Object for camera to follow.
+	#  @param focus GraphicObject for camera to follow.
 	def setFocus(self,focus):
 		self.focus = focus
 	
-	## Sets up the GUI for who the player is talking to.
-	#  @param talking The NPC the player is talking to.
-	def setTalking(self,talking):
-		self.talking=gui.Dialog(talking,self.Player.getParent())
-	
-	## Exits a conversation.
-	def resetTalking(self):
-		self.talking=None
-	
-	## Returns whether or not the player is talking to someone.
-	def getTalking(self):
-		return self.talking
-	
-	## Sets which shop the player is interacting with
-	def setShop(self,shop):
-		self.shop = shop
-	
-	## Returns which shop the player is interacting with
-	def getShop(self):
-		return self.shop
-	
 	## Sets the name of the current area.
+	#
+	#  @param name String that contains the name of the level.
 	def setLevelName(self,name):
 		self.levelName=name
 	
-	## Toggles whether or not the player's inventory is open.
-	def toggleInven(self):
-		if self.inven:
-			self.inven=False
-		else:
-			self.inven=gui.InvenMenu(self.Player.getParent(),self.levelName)
-	
-	## Returns the InvenMenu object for the player.
-	def getInven(self):
-		return self.inven
-	
-	## Toggles the pause menu.
-	def togglePause(self):
-		if self.paused:
-			self.paused=False
-		else:
-			self.paused=gui.PauseMenu()
-	
-	## Returns the PauseMenu object.
-	def getPause(self):
-		return self.paused
-	
-	## Loads a new area
-	def loadLevel(self,level):
-		self.background = pygame.image.load("Backgrounds/Images/"+level+".png").convert()
+	## Sets the background.
+	#
+	#  @param background pygame.Surface that will be displayed behind all other objects.
+	def setBackground(self,background):
+		self.background = background
 	
 	## Returns the screen
 	#
 	#  For passing the screen to the BattleGraphicsEngine, not for drawing things to the screen without using the engine.
 	def getScreen(self):
 		return self.screen
-	
-	## Returns if is using a ScaledScreen
-	#
-	#  For passing to the BattleGraphicsEngine
-	def getIsScaled(self):
-		return self.isScaled
 	
 	## Updates objects
 	#
@@ -198,12 +299,12 @@ class GraphicsEngine(object):
 		self.screen.fill((0,0,0))
 		
 		if self.focus != None:
-			if self.background.get_width()>320:
-				offsetX = self.focus.getX()+(self.focus.getWidth()/2)-160
+			if self.background.get_width()>self.screenWidth:
+				offsetX = self.focus.getX()+(self.focus.getWidth()/2)-(self.screenWidth/2)
 			else:
 				offsetX = 0
-			if self.background.get_height()>240:
-				offsetY = self.focus.getY()+(self.focus.getHeight()/2)-120
+			if self.background.get_height()>self.screenHeight:
+				offsetY = self.focus.getY()+(self.focus.getHeight()/2)-(self.screenHeight/2)
 			else:
 				offsetY = 0
 		else:
@@ -214,8 +315,8 @@ class GraphicsEngine(object):
 			Object.update(tick)
 		
 		
-		self.Player.update(tick)
-		self.objects.append(self.Player)
+		self.player.update(tick)
+		self.objects.append(self.player)
 		
 		self.screen.blit(self.background,(self.cameraPosX-offsetX,self.cameraPosY-offsetY))
 		for go in self.objects:
@@ -231,32 +332,57 @@ class GraphicsEngine(object):
 			if go.layer==1:
 				self.screen.blit(go.getSprite(),(go.getX()-offsetX,go.getY()-offsetY))
 		
-		self.objects.remove(self.Player)
-		
-		if self.inven:
-			if self.inven.update(self.screen,tick):
-				self.toggleInven()
-		
-		if self.shop != False:
-			if self.shop.update(self.screen,tick):
-				self.shop = False
-		
-		if self.paused:
-			self.paused.update(self.screen,tick)
-		
-		if self.talking != None:
-			if self.talking.update(self.screen,tick)==False:
-				if self.talking.getShop() == "Buy":
-					self.setShop(gui.ShopBuyMenu(self.Player.getParent(),self.talking.talking.getShop()))
-				elif self.talking.getShop() == "Sell":
-					self.setShop(gui.ShopSellMenu(self.Player.getParent()))
-				self.talking.talking.setTalking(False)
-				self.talking=False
+		self.objects.remove(self.player)
 		
 		for go in self.objects:
 			if go.layer==2:
 				self.screen.blit(go.getSprite(),(go.getX()-offsetX,go.getY()-offsetY))
 		
-		if self.isScaled:
-			self.screen.update()
 		pygame.display.update()
+
+if __name__ == "__main__":								# Example code below:
+	import pygame
+	from pygame.locals import *
+	pygame.init()
+	background = pygame.Surface([640,480])				# Make some background image, would normally get from file?
+	background.fill((127,127,255))						#   It will be light blue for now
+	screen = pygame.display.set_mode((640,480))			# Get screen.
+	engine = GraphicsEngine(screen)						# Start graphics engine.
+	engine.setBackground(background)					# Set background.
+	
+	playerImage = pygame.Surface((26,26))				# Make the player's square.
+	playerImage.fill((0,255,0))							#   It can be green.
+	playerAnimations = {"Idle":Animation(AnimationFrame(playerImage,1,None,1),None,"Idle")}	# This line doesn't really make sense if squares are our end goal but makes things easy if we decide to move to sprites.
+	player = GraphicObject(playerAnimations)			# Make the player's graphic object.
+	player.setPos([320,200])							# Put the player at (320,200)
+	engine.setPlayer(player)							# Set the player.
+	
+	clock = pygame.time.Clock()							# Set up the clock.
+	move = [0,0]										# Movement vector
+	
+	while True:
+		tick = clock.tick()/1000.0						# Calculate tick.
+		
+		for event in pygame.event.get():				# Event loop.
+			if event.type == QUIT:						#   If quit...
+				pygame.quit()
+				exit()
+			elif event.type == KEYDOWN:					#   If WASD is pressed, set movement vector appropriately.
+				if event.key == K_w:
+					move[1] = -100
+				elif event.key == K_s:
+					move[1] = 100
+				elif event.key == K_a:
+					move[0] = -100
+				elif event.key == K_d:
+					move[0] = 100
+			elif event.type == KEYUP:					#   If WASD is released, reset movement vector.
+				if event.key == K_w or event.key == K_s:
+					move[1] = 0
+				elif event.key == K_a or event.key == K_d:
+					move[0] = 0
+
+		player.setPos([player.getX()+(move[0]*tick),player.getY()+(move[1]*tick)])		# Update player's position. Because there is no such thing as a part of a pixel,
+																						#   The position of graphic objects should usually be integers.
+																						#   We will ignore that for this example to make things simpler.
+		engine.update(tick)								# Update screen.

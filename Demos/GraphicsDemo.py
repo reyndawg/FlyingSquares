@@ -8,12 +8,12 @@ pygame.init()
 background = pygame.Surface([640,480])				# Make some background image, would normally get from file?
 background.fill((127,127,255))						#   It will be light blue for now
 screen = pygame.display.set_mode((640,480))			# Get screen.
-engine = GraphicsEngine.GraphicsEngine(screen)						# Start graphics engine.
+engine = GraphicsEngine.GraphicsEngine(screen)		# Start graphics engine.
 engine.setBackground(background)					# Set background.
 
 #Original code before conveniece function.	
 #playerImage = pygame.Surface((26,26))				# Make the player's square.
-#playerImage.fill((0,255,0))							#   It can be green.
+#playerImage.fill((0,255,0))						#   It can be green.
 #playerAnimations = {"Idle":Animation(AnimationFrame(playerImage,1,None,1),None,"Idle")}	# This line doesn't really make sense if squares are our end goal but makes things easy if we decide to move to sprites.
 #player = GraphicObject(playerAnimations)			# Make the player's graphic object.
 

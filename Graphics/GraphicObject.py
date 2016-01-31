@@ -1,10 +1,4 @@
-## Sort function for sorting by y
-#
-#  Allows things that have smallers y values to be drawn first.
-def sortY(a):
-	#if int(a.getPos()[1])!=a.getPos()[1]:		#  This is commented out for the sake of the example, because it uses partial pixels.
-	#	print "Sort Error: "+str(type(a))
-	return int(a.getPos()[1]+a.getHeight())
+import pygame
 
 ## Container for a single frame in an animation.
 #
@@ -230,159 +224,34 @@ class GraphicObject(object):
 	def update(self,tick):
 		self.currentAnimation = self.currentAnimation.update(tick)
 
-## Graphics Engine for main portion of game.
+## A convenience function that creates a GraphicObject that is a colored square.
 #
-#  Only one instance of the graphics engine should be running at any given time.
-class GraphicsEngine(object):
-	
-	## Constructor.
-	#  @param screen A reference to either a Pygame screen object or a scaledScreen.
-	#  @param isScaled If @c screen is a scaledScreen, then should be @c True.
-	def __init__(self,screen):
-		self.screen = screen
-		self.screenWidth = screen.get_width()
-		self.screenHeight = screen.get_height()
-		self.objects = []
-		self.player = None
-		self.background = pygame.surface.Surface([0,0])
-		self.cameraPosX = 0
-		self.cameraPosY = 0
-		self.focus=None
-		self.levelName=None
-	
-	## Add an object.
-	#
-	#  Adds an object to the list of objects to be drawn and updated.
-	#  @param Object GraphicObject to be added.
-	def addObject(self,Object):
-		self.objects.append(Object)
-	
-	## Clears object list.
-	def clearObjects(self):
-		self.objects = []
-	
-	## Sets who is the player.
-	#  @param Player The player's GraphicObject.
-	def setPlayer(self,player):
-		self.player = player
-	
-	## Sets the focus of the camera.
-	#
-	#  Sets an object for the camera to follow.
-	#  @param focus GraphicObject for camera to follow.
-	def setFocus(self,focus):
-		self.focus = focus
-	
-	## Sets the name of the current area.
-	#
-	#  @param name String that contains the name of the level.
-	def setLevelName(self,name):
-		self.levelName=name
-	
-	## Sets the background.
-	#
-	#  @param background pygame.Surface that will be displayed behind all other objects.
-	def setBackground(self,background):
-		self.background = background
-	
-	## Returns the screen
-	#
-	#  For passing the screen to the BattleGraphicsEngine, not for drawing things to the screen without using the engine.
-	def getScreen(self):
-		return self.screen
-	
-	## Updates objects
-	#
-	#  Updates all objects, draws them in the correct order and in the correct place in relation to the camera.
-	#  @param tick Time that has passed since last clock cycle, in seconds.
-	def update(self,tick):
-		self.screen.fill((0,0,0))
-		
-		if self.focus != None:
-			if self.background.get_width()>self.screenWidth:
-				offsetX = self.focus.getX()+(self.focus.getWidth()/2)-(self.screenWidth/2)
-			else:
-				offsetX = 0
-			if self.background.get_height()>self.screenHeight:
-				offsetY = self.focus.getY()+(self.focus.getHeight()/2)-(self.screenHeight/2)
-			else:
-				offsetY = 0
-		else:
-			offsetX=0
-			offsetY=0
-		
-		for Object in self.objects:
-			Object.update(tick)
-		
-		
-		self.player.update(tick)
-		self.objects.append(self.player)
-		
-		self.screen.blit(self.background,(self.cameraPosX-offsetX,self.cameraPosY-offsetY))
-		for go in self.objects:
-			if go.layer<0:
-				self.screen.blit(go.getSprite(),(go.getX()-offsetX,go.getY()-offsetY))
-		
-		self.objects.sort(key=sortY,reverse=False)
-		for go in self.objects:
-			if go.layer==0:
-				self.screen.blit(go.getSprite(),(go.getX()-offsetX,go.getY()-offsetY))
-		
-		for go in self.objects:
-			if go.layer==1:
-				self.screen.blit(go.getSprite(),(go.getX()-offsetX,go.getY()-offsetY))
-		
-		self.objects.remove(self.player)
-		
-		for go in self.objects:
-			if go.layer==2:
-				self.screen.blit(go.getSprite(),(go.getX()-offsetX,go.getY()-offsetY))
-		
-		pygame.display.update()
+#  @param size How long each side of the square should be.
+#  @param color An RGB tuple describing what color the square should be.
+#  @param outline Set to @c True for a 1 pixel outline.
+#  @param outlineColor What color the outline should be.
+def createSquareGraphicObject(size,color,outline=False,outlineColor=None):
+	image = pygame.Surface((size,size))
+	if outline:
+		image.fill(outlineColor)
+		image.fill(color,[1,1,size-2,size-2])
+	else:
+		image.fill(color)
+	animations = {"Idle":Animation(AnimationFrame(image,1,None,1),None,"Idle")}
+	return GraphicObject(animations)
 
-if __name__ == "__main__":								# Example code below:
-	import pygame
-	from pygame.locals import *
-	pygame.init()
-	background = pygame.Surface([640,480])				# Make some background image, would normally get from file?
-	background.fill((127,127,255))						#   It will be light blue for now
-	screen = pygame.display.set_mode((640,480))			# Get screen.
-	engine = GraphicsEngine(screen)						# Start graphics engine.
-	engine.setBackground(background)					# Set background.
-	
-	playerImage = pygame.Surface((26,26))				# Make the player's square.
-	playerImage.fill((0,255,0))							#   It can be green.
-	playerAnimations = {"Idle":Animation(AnimationFrame(playerImage,1,None,1),None,"Idle")}	# This line doesn't really make sense if squares are our end goal but makes things easy if we decide to move to sprites.
-	player = GraphicObject(playerAnimations)			# Make the player's graphic object.
-	player.setPos([320,200])							# Put the player at (320,200)
-	engine.setPlayer(player)							# Set the player.
-	
-	clock = pygame.time.Clock()							# Set up the clock.
-	move = [0,0]										# Movement vector
-	
-	while True:
-		tick = clock.tick()/1000.0						# Calculate tick.
-		
-		for event in pygame.event.get():				# Event loop.
-			if event.type == QUIT:						#   If quit...
-				pygame.quit()
-				exit()
-			elif event.type == KEYDOWN:					#   If WASD is pressed, set movement vector appropriately.
-				if event.key == K_w:
-					move[1] = -100
-				elif event.key == K_s:
-					move[1] = 100
-				elif event.key == K_a:
-					move[0] = -100
-				elif event.key == K_d:
-					move[0] = 100
-			elif event.type == KEYUP:					#   If WASD is released, reset movement vector.
-				if event.key == K_w or event.key == K_s:
-					move[1] = 0
-				elif event.key == K_a or event.key == K_d:
-					move[0] = 0
-
-		player.setPos([player.getX()+(move[0]*tick),player.getY()+(move[1]*tick)])		# Update player's position. Because there is no such thing as a part of a pixel,
-																						#   The position of graphic objects should usually be integers.
-																						#   We will ignore that for this example to make things simpler.
-		engine.update(tick)								# Update screen.
+## A convenience function that creates a GraphicObject that is a colored square.
+#
+#  @param size A tuple describing the size of the rectangle.
+#  @param color An RGB tuple describing what color the square should be.
+#  @param outline Set to @c True for a 1 pixel outline.
+#  @param outlineColor What color the outline should be.
+def createRectGraphicObject(size,color,outline=False,outlineColor=None):
+	image = pygame.Surface(size)
+	if outline:
+		image.fill(outlineColor)
+		image.fill(color,[1,1,size[0]-2,size[1]-2])
+	else:
+		image.fill(color)
+	animations = {"Idle":Animation(AnimationFrame(image,1,None,1),None,"Idle")}
+	return GraphicObject(animations)

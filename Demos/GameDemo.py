@@ -18,14 +18,17 @@ playerG = GraphicObject.createSquareGraphicObject(26,(0,255,0),True,(0,127,0))  
 
 player = GameObject.GameObject(playerG,10,(320,200),100,None,ally=True)     # Create a GameObject for the player with 10 hp at position (320,200)
                                                                             # that moves at 100 pixels per second with no hit box. This player is on the ally team.                                                                         
-gameEngine.setPlayer(player)                            # Set the player.
+gameEngine.setPlayer(player)                        # Set the player.
 
 enemyG = GraphicObject.createSquareGraphicObject(13,(255,0,0),True,(127,0,0))  # Create a red square for an enemy.
-enemy = GameObject.GameObject(enemyG,10,(320,50),100,None)  #Create an enemy GameObject.
+enemy = GameObject.GameObject(enemyG,10,(320,50),100,pygame.rect.Rect([0,0,13,13]))  #Create an enemy GameObject.
+enemy.setVel((50,0))                                # Make the enemy move right
 gameEngine.addEnemy(enemy)
 
 clock = pygame.time.Clock()                         # Set up the clock.
 move = [0,0]                                        # Movement vector
+timeout = 5                                         # Time until next enemy is spawned.
+vel = -50                                           # Velocity the next enemy will have in the x direction.
 
 while True:
     tick = clock.tick()/1000.0                      # Calculate tick.
@@ -43,6 +46,12 @@ while True:
                 move[0] = -100
             elif event.key == K_d:
                 move[0] = 100
+            elif event.key == K_RETURN:             #   If Enter is pressed, fire laser!
+                proj = Projectile.Laser([player.getX()+13,player.getY()],(0,-400),1,True)    # Create laser projectile
+                gameEngine.addProjectile(proj)      #     Add projectile
+            elif event.key == K_m:                  #   If Enter is pressed, fire Missile!
+                proj = Projectile.Missile([player.getX()+13,player.getY()],(0,-4.0),1,True)    # Create missile projectile
+                gameEngine.addProjectile(proj)      #     Add projectile
         elif event.type == KEYUP:                   #   If WASD is released, reset movement vector.
             if event.key == K_w or event.key == K_s:
                 move[1] = 0
@@ -50,4 +59,22 @@ while True:
                 move[0] = 0
 
     player.setVel(move)                             # Update player's position
-    gameEngine.update(tick)                         # Update screen.
+    
+    for enemy in gameEngine.getEnemies():
+        if enemy.getPos()[0]<40:                    # Make the enemy move back and forth
+            enemy.setVel((50,0))
+        elif enemy.getPos()[0]>600:
+            enemy.setVel((-50,0))
+    
+    if timeout <= 0:                                # If 5 seconds have passed make a new enemy
+        enemyG = GraphicObject.createSquareGraphicObject(13,(255,0,0),True,(127,0,0))  # Create a red square for an enemy.
+        enemy = GameObject.GameObject(enemyG,10,(320,50),100,pygame.rect.Rect([0,0,13,13]))  #Create an enemy GameObject.
+        enemy.setVel((vel,0))                       # Make the enemy move right
+        gameEngine.addEnemy(enemy)
+        vel *= -1
+        timeout = 5
+    else:
+        timeout -= tick
+    
+    screen.fill((255,0,0),(40,10,560,10))
+    gameEngine.update(tick)                         # Update GameEngine which updates GraphicEngine.

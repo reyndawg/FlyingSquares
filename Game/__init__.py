@@ -1,1 +1,1 @@
-__all__ = ["GameObject","GameEngine"]
+__all__ = ["GameObject","GameEngine","Projectile"]

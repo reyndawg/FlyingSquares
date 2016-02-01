@@ -35,6 +35,10 @@ class GraphicsEngine(object):
     def addObject(self,Object):
         self.objects.append(Object)
     
+    ## Removes an object.
+    def removeObject(self,Object):
+		self.objects.remove(Object)
+    
     ## Clears object list.
     def clearObjects(self):
         self.objects = []

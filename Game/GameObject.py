@@ -60,7 +60,7 @@ class GameObject(object):
     
     ## Returns this object's hit box.
     def getHitBox(self):
-        return self.hitBox
+        return self.hitBox.move(self.getGraphicObject().getX(),self.getGraphicObject().getY())
     
     ## Returns @c True if this object is on the player's team, otherwise returns false.
     def isAlly(self):
@@ -76,6 +76,9 @@ class GameObject(object):
         self.x = pos[0]
         self.y = pos[1]
         self.graphicObject.setPos(pos)
+    
+    def takeDamage(self,dmg):
+		self.hp -= dmg
     
     ## Updates this object.
     def update(self,tick):
